@@ -1,0 +1,44 @@
+#include <WiFi.h>        // Use <ESP8266WiFi.h> for ESP8266
+#include <WebServer.h>   // Use <ESP8266WebServer.h> for ESP8266
+
+const char* ssid = "your wifi ";       // Replace with your WiFi SSID
+const char* password = "wifi password "; // Replace with your WiFi password
+
+const int sensorPin = 18; // Ensure this pin is correct for your board
+
+WebServer server(80); // Create a web server object on port 80
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(sensorPin, INPUT);
+
+    WiFi.begin(ssid, password);
+    Serial.println("Connecting to WiFi.....");
+
+    while (WiFi.status() != WL_CONNECTED) 
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("\nConnected to WiFi");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    server.on("/", handleRoot); // Handle root URL request
+    server.begin();
+}
+
+void loop() {
+    server.handleClient(); // Listen for client requests
+}
+
+void handleRoot() {
+    int sensorState = digitalRead(irSensorPin);
+    String message = (sensorState == LOW) ? "Object Detected!" : "Object Not Detected";
+
+    String html = "<html><head><meta http-equiv='refresh' content='5'></head>"
+                  "<body><h1>" + message + "</h1></body></html>";
+
+    server.send(200, "text/html", html);
+}
