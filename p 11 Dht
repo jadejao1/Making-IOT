@@ -1,0 +1,92 @@
+#include <WiFi.h>
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
+ 
+ 
+#define DHTPIN 4     // Digital pin connected to the DHT sensor
+#define DHTTYPE DHT11   // DHT 11
+ 
+ 
+DHT dht(DHTPIN, DHTTYPE);
+ 
+ 
+const char* ssid = "OnePlus-AJ";  // Replace with your network SSID
+const char* password = "jas12345";  // Replace with your network password
+ 
+ 
+WiFiServer server(80);
+ 
+ 
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+ 
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+ 
+ 
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+ 
+ 
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+ 
+ 
+  // Wait until the client sends some data
+  while (!client.available()) {
+    delay(1);
+  }
+ 
+ 
+  // Read the request
+  String request = client.readStringUntil('\r');
+  client.flush();
+ 
+ 
+  // Get sensor readings
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+ 
+ 
+  // If any reads failed, return early
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+ 
+ 
+  // Send the HTML page with auto-refresh
+  String html = "<!DOCTYPE html><html>";
+  html += "<head>";
+  html += "<meta http-equiv='refresh' content='5'>";  // Refresh the page every 5 seconds
+  html += "<title>ESP32 DHT11 Sensor</title></head>";
+  html += "<body><h1>DHT11 Sensor Data</h1>";
+  html += "<p>Temperature: " + String(t) + " &deg;C</p>";
+  html += "<p>Humidity: " + String(h) + " %</p>";
+  html += "</body></html>";
+ 
+ 
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-type:text/html");
+  client.println();
+  client.print(html);
+  client.println();
+ 
+ 
+  client.stop(); // Close the connection
+}
